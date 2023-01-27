@@ -10,12 +10,42 @@
         </div>
         <div class="row">
             <div class="col-md-2">
-                <button class="btn btn-primary">Next</button>
+                <button class="btn btn-primary" id="gen">Next</button>
             </div>
             <div class="col-md-2">
-                <button class="btn btn-secondary">Reset</button>
+                <button class="btn btn-secondary" id="reset">Reset</button>
             </div>
         </div>
+        <div class="row">
+            <ul class="" id="content">
+                {#Insert generated numbers here with JS#}
+            </ul>
+        </div>
     </div>
+
+    <script>
+        $(document).ready(function () {
+            socket = new WebSocket('ws://localhost:8000/generate')
+            socket.onmessage = function (event) {
+                var data = JSON.parse(event.data);
+                if (data.reset) {
+                    $('#content').html("");
+                } else {
+                    $('#content').html("");
+                    for (var i = 0; i < data.length; i++) {
+                        appendme = "<li>" + data[i] + "</li>";
+                        $('#content').append(appendme);
+                    }
+                }
+            }
+            $('#gen').click(function () {
+                socket.send("generate");
+            });
+            $('#reset').click(function () {
+                socket.send("reset");
+            });
+        });
+
+    </script>
 
 {% endblock %}
