@@ -1,17 +1,27 @@
 import json
 import random
 
+from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 from django.core.serializers import serialize
 
 from app import models
 
+
 class GenerateConsumer(WebsocketConsumer):
     def connect(self):
+        self.room_name = "defaultroom"
+        self.room_group_name = "defaultgroup"
+        async_to_sync(self.channel_layer.group_add)(
+            self.room_group_name, self.channel_name
+        )
         self.accept()
         print("Client connected")
 
     def disconnect(self, close_code):
+        async_to_sync(self.channel_layer.group_discard)(
+            self.room_group_name, self.channel_name
+        )
         print("Client disconnected")
 
     def receive(self, text_data):
@@ -25,8 +35,19 @@ class GenerateConsumer(WebsocketConsumer):
                 numberList = []
                 for number in numbers:
                     numberList.append(number.number)
-                self.send(text_data = json.dumps(numberList))
+                async_to_sync(self.channel_layer.group_send)(
+                    self.room_group_name, {"type": "send_resp", "message": numberList}
+                )
+                # self.send(text_data = json.dumps(numberList))
         if text_data == "reset":
             models.numbers.objects.all().delete()
             resetResponse = {'reset': True}
-            self.send(text_data = json.dumps(resetResponse))
+            async_to_sync(self.channel_layer.group_send)(
+                self.room_group_name, {"type": "send_resp", "message": resetResponse}
+            )
+            # self.send(text_data = json.dumps(resetResponse))
+
+    def send_resp(self, event):
+        message = event["message"]
+        self.send(text_data=json.dumps(message))
+
